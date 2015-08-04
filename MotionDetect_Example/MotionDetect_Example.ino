@@ -1,6 +1,8 @@
 #include <Adafruit_VC0706.h>
 #include <SPI.h>
 #include <SD.h>
+#include <Wire.h>
+#include "RTClib.h"
 
 
 // comment out this line if using Arduino V23 or earlier
@@ -8,19 +10,13 @@
 #define chipSelect 10
 
 SoftwareSerial cameraconnection = SoftwareSerial(9, 10);
-
 Adafruit_VC0706 cam = Adafruit_VC0706(&cameraconnection);
 
-// Using hardware serial on Mega: camera TX conn. to RX1,
-// camera RX to TX1, no SoftwareSerial object is required:
-//Adafruit_VC0706 cam = Adafruit_VC0706(&Serial1);
+RTC_DS1307 RTC;
 
 
 void setup() {
-
-  // When using hardware SPI, the SS pin MUST be set to an
-  // output (even if not connected or used).  If left as a
-  // floating input w/SPI on, this can cause lockuppage.
+  
 #if !defined(SOFTWARE_SPI)
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
   if(chipSelect != 53) pinMode(53, OUTPUT); // SS on Mega
@@ -30,6 +26,8 @@ void setup() {
 #endif
 
   Serial.begin(9600);
+  connectToRTC();
+  
   Serial.println("VC0706 Camera test");
   
   // see if the card is present and can be initialized:
@@ -87,6 +85,16 @@ void setup() {
 
 
 void loop() {
+  
+  DateTime fileDate;
+  fileDate = RTC.now();
+
+    String fileDatename;
+    fileDatename = String(fileDate.month()) + '/' + String(fileDate.day()) + '_'
+                   + String(fileDate.hour()) + ':' + String(fileDate.minute()) + ':'
+                   + String(fileDate.second()) + ".JPG";
+    Serial.println(fileDatename);
+  
  if (cam.motionDetected()) {
    Serial.println("Motion!");   
    cam.setMotionDetect(false);
@@ -95,7 +103,16 @@ void loop() {
     Serial.println("Failed to snap!");
   else 
     Serial.println("Picture taken!");
-  
+
+    char filename[fileDatename.length()];
+    for (uint8_t i = 0; i <= fileDatename.length(); i++) {
+      filename[i] = fileDatename.charAt(i);
+      if (! SD.exists(filename)) {
+        break;  // leave the loop!
+      }
+    }
+    
+/*  
   char filename[13];
   strcpy(filename, "IMAGE00.JPG");
   for (int i = 0; i < 100; i++) {
@@ -106,7 +123,7 @@ void loop() {
       break;
     }
   }
-  
+  */
   File imgFile = SD.open(filename, FILE_WRITE);
   
   uint16_t jpglen = cam.frameLength();
@@ -132,4 +149,14 @@ void loop() {
   cam.setMotionDetect(true);
  }
 }
+
+void connectToRTC() {
+  // connect to RTC
+  Wire.begin();
+  if (!RTC.begin()) {
+    Serial.println(F("RTC failed"));
+
+  }
+}
+
 
