@@ -6,37 +6,37 @@
 
 
 // comment out this line if using Arduino V23 or earlier
-#include <SoftwareSerial.h>         
+#include <SoftwareSerial.h>
 #define chipSelect 10
 
-SoftwareSerial cameraconnection = SoftwareSerial(9, 10);
+SoftwareSerial cameraconnection = SoftwareSerial(3, 2);
 Adafruit_VC0706 cam = Adafruit_VC0706(&cameraconnection);
 
 RTC_DS1307 RTC;
 
 
 void setup() {
-  
+
 #if !defined(SOFTWARE_SPI)
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-  if(chipSelect != 53) pinMode(53, OUTPUT); // SS on Mega
-#else
-  if(chipSelect != 10) pinMode(10, OUTPUT); // SS on Uno, etc.
+  if (chipSelect != 53) pinMode(53, OUTPUT); // SS on Mega
+#elseb
+  if (chipSelect != 10) pinMode(10, OUTPUT); // SS on Uno, etc.
 #endif
 #endif
 
   Serial.begin(9600);
   connectToRTC();
-  
+
   Serial.println("VC0706 Camera test");
-  
+
   // see if the card is present and can be initialized:
   if (!SD.begin(chipSelect)) {
     Serial.println("Card failed, or not present");
     // don't do anything more:
     return;
-  }  
-  
+  }
+
   // Try to locate the camera
   if (cam.begin()) {
     Serial.println("Camera Found:");
@@ -54,9 +54,9 @@ void setup() {
     Serial.println("-----------------");
   }
 
-  // Set the picture size - you can choose one of 640x480, 320x240 or 160x120 
+  // Set the picture size - you can choose one of 640x480, 320x240 or 160x120
   // Remember that bigger pictures take longer to transmit!
-  
+
   cam.setImageSize(VC0706_640x480);        // biggest
   //cam.setImageSize(VC0706_320x240);        // medium
   //cam.setImageSize(VC0706_160x120);          // small
@@ -75,9 +75,9 @@ void setup() {
 
   // You can also verify whether motion detection is active!
   Serial.print("Motion detection is ");
-  if (cam.getMotionDetect()) 
+  if (cam.getMotionDetect())
     Serial.println("ON");
-  else 
+  else
     Serial.println("OFF");
 }
 
@@ -85,53 +85,63 @@ void setup() {
 
 
 void loop() {
-  
+
+  if (cam.motionDetected()) {
+    Serial.println("Motion!");
+    cam.setMotionDetect(false);
+    Serial.println(cam.motionDetected());
+    delay(500);
+
+    if (! cam.takePicture())
+      Serial.println("Failed to snap!");
+    else
+      Serial.println("Picture taken!");
+    takePic();
+    cam.resumeVideo();
+    cam.setMotionDetect(true);
+  }
+}
+
+void takePic() {
   DateTime fileDate;
   fileDate = RTC.now();
 
-    String fileDatename;
-    fileDatename = String(fileDate.month()) + '/' + String(fileDate.day()) + '_'
-                   + String(fileDate.hour()) + ':' + String(fileDate.minute()) + ':'
-                   + String(fileDate.second()) + ".JPG";
-    Serial.println(fileDatename);
-  
- if (cam.motionDetected()) {
-   Serial.println("Motion!");   
-   cam.setMotionDetect(false);
-   
-  if (! cam.takePicture()) 
-    Serial.println("Failed to snap!");
-  else 
-    Serial.println("Picture taken!");
-
+  String fileDatename;
+  fileDatename = String(fileDate.month())  + String(fileDate.day())
+                 + String(fileDate.hour())  + String(fileDate.minute())
+                 + String(fileDate.second()) + '.' + 'J' + 'P' + 'G';
+  /*
     char filename[fileDatename.length()];
     for (uint8_t i = 0; i <= fileDatename.length(); i++) {
       filename[i] = fileDatename.charAt(i);
-      if (! SD.exists(filename)) {
-        break;  // leave the loop!
+      if (i == fileDatename.length()) {
+        //        if (! SD.exists(filename)) {
+        //          break;  // leave the loop!
+        //        }
+        break;
       }
     }
-    
-/*  
+  */
+
   char filename[13];
   strcpy(filename, "IMAGE00.JPG");
   for (int i = 0; i < 100; i++) {
-    filename[5] = '0' + i/10;
-    filename[6] = '0' + i%10;
+    filename[5] = '0' + i / 10;
+    filename[6] = '0' + i % 10;
     // create if does not exist, do not open existing, write, sync after write
     if (! SD.exists(filename)) {
       break;
     }
   }
-  */
+
   File imgFile = SD.open(filename, FILE_WRITE);
-  
+
   uint16_t jpglen = cam.frameLength();
   Serial.print(jpglen, DEC);
   Serial.println(" byte image");
- 
+
   Serial.print("Writing image to "); Serial.print(filename);
-  
+
   while (jpglen > 0) {
     // read 32 bytes at a time;
     uint8_t *buffer;
@@ -145,9 +155,10 @@ void loop() {
   }
   imgFile.close();
   Serial.println("...Done!");
-  cam.resumeVideo();
-  cam.setMotionDetect(true);
- }
+}
+
+void createFile() {
+
 }
 
 void connectToRTC() {
