@@ -90,7 +90,7 @@ void loop() {
     Serial.println("Motion!");
     cam.setMotionDetect(false);
     Serial.println(cam.motionDetected());
-    delay(500);
+    delay(250);
 
     if (! cam.takePicture())
       Serial.println("Failed to snap!");
@@ -110,7 +110,7 @@ void takePic() {
   fileDatename = String(fileDate.month())  + String(fileDate.day())
                  + String(fileDate.hour())  + String(fileDate.minute())
                  + String(fileDate.second()) + '.' + 'J' + 'P' + 'G';
-  /*
+  
     char filename[fileDatename.length()];
     for (uint8_t i = 0; i <= fileDatename.length(); i++) {
       filename[i] = fileDatename.charAt(i);
@@ -121,8 +121,8 @@ void takePic() {
         break;
       }
     }
-  */
-
+  
+/*
   char filename[13];
   strcpy(filename, "IMAGE00.JPG");
   for (int i = 0; i < 100; i++) {
@@ -133,6 +133,7 @@ void takePic() {
       break;
     }
   }
+  */
 
   File imgFile = SD.open(filename, FILE_WRITE);
 
